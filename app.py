@@ -1,5 +1,7 @@
+
 import streamlit as st
 import time
+import pandas as pd
 from aqi import calculate_aqi_pm25, get_aqi_category
 
 st.set_page_config(
@@ -17,6 +19,9 @@ if "monitoring" not in st.session_state:
 
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
+
+if "aqi_history" not in st.session_state:
+    st.session_state.aqi_history = []
 
 
 # -----------------------------
@@ -139,6 +144,26 @@ category = get_aqi_category(aqi)
 
 
 # -----------------------------
+# STORE AQI HISTORY
+# -----------------------------
+
+current_time = time.strftime("%H:%M:%S")
+
+st.session_state.aqi_history.append({
+    "Time": current_time,
+    "AQI": round(aqi, 2),
+    "PM2.5": pm25,
+    "PM10": pm10,
+    "Temperature": temperature,
+    "Humidity": humidity
+})
+
+# Keep the history from growing forever
+if len(st.session_state.aqi_history) > 100:
+    st.session_state.aqi_history.pop(0)
+
+
+# -----------------------------
 # AQI DISPLAY
 # -----------------------------
 
@@ -214,6 +239,36 @@ else:
 
     st.error(
         "🚨 SEVERE — Minimize outdoor exposure and follow local health guidance."
+    )
+
+
+# -----------------------------
+# AQI HISTORY GRAPH
+# -----------------------------
+
+st.divider()
+
+st.subheader("📈 AQI History")
+
+if len(st.session_state.aqi_history) > 1:
+
+    history_df = pd.DataFrame(
+        st.session_state.aqi_history
+    )
+
+    history_df["Time"] = pd.to_datetime(
+        history_df["Time"],
+        format="%H:%M:%S"
+    )
+
+    st.line_chart(
+        history_df.set_index("Time")["AQI"]
+    )
+
+else:
+
+    st.info(
+        "AQI history will appear after multiple readings."
     )
 
 
